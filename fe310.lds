@@ -4,7 +4,8 @@ MEMORY {
 	flash (rx) : ORIGIN = 0x20000000, LENGTH = 4M
 	/* Instruction Tightly Integrated Memory */
 	itim (rwx) : ORIGIN = 0x08000000, LENGTH = 8K
-	/* Data Tightly-Integrated Memory, or RAM */
+	/* Data Tightly-Integrated Memory, or RAM
+	   [ .data--> .bss--> heap-->  <--stack ] */
 	dtim  (rw) : ORIGIN = 0x80000000, LENGTH = 16K
 }
 
@@ -14,21 +15,25 @@ _lds_stack_top    = _lds_stack_bottom - _lds_stack_size;
 
 SECTIONS {
 	.text.onflash : {
-		*(.text.bootloader)
+		*(.text.init_stack)
 		*(.text.start)
 	} >flash AT>flash
 
 	.text : {
+		_lds_text_vma_start = .;
 		*(.text*)
-		/* TODO move to ITIM */
-	} >flash AT>flash
+		_lds_text_vma_end = .;
+	} >itim AT>flash
+	_lds_text_lma_start = LOADADDR(.text);
 
 	.data : {
 		_lds_data_vma_start = .;
+		*(.rodata*)
 		*(.data*)
 		*(.sdata*)
 		_lds_data_vma_end = .;
 	} >dtim AT>flash
+	/* note: LMA is flash address, VMA is dtim address. */
 	_lds_data_lma_start = LOADADDR(.data);
 
 	.bss (NOLOAD) : {

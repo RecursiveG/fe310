@@ -3,3 +3,4 @@ old*
 *.map
 *.o
 *.bak
+settings.json
