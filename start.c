@@ -81,10 +81,10 @@ void _start(void) {
     REG(UART0_DIV)     = 255; // baud rate = 250000
     _start_puts("\r\nUART0 initialized.\r\n");
 
-    // Jump to the main function.
-    int main(void);
-    main();
-    _start_puts("main() function returns. Halting.\r\n");
+    // Jump to prelude, which prepares for main().
+    void _prelude(void);
+    _prelude();
+    _start_puts("_prelude() returns. Halting.\r\n");
     while(1);
 }
 
