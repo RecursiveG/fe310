@@ -9,7 +9,7 @@ program.elf program.map: start.o prelude.o main.o fe310.lds linker_symbols.h Mak
 start.o : start.c linker_symbols.h registers.h Makefile
 	$(CC) $(CFLAGS) -c start.c -o start.o
 
-prelude.o : prelude.c registers.h Makefile
+prelude.o : prelude.c prelude.h linker_symbols.h registers.h Makefile
 	$(CC) $(CFLAGS) -c prelude.c -o prelude.o
 
 main.o : main.c registers.h Makefile

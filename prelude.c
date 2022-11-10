@@ -1,6 +1,22 @@
+#include <stddef.h>
 #include <stdint.h>
 
 #include "registers.h"
+#include "linker_symbols.h"
+#include "prelude.h"
+
+/***************************
+ *         Globals         *
+ ***************************/
+
+static uint32_t _heap_base;
+static uint32_t _heap_tail;
+
+struct heap_block_header {
+    int allocated : 1;
+    uint16_t len : 15;
+} __attribute__((packed));
+_Static_assert(sizeof(struct heap_block_header) == 2, "heap block header size err");
 
 /****************************
  * Common library functions *
@@ -38,12 +54,92 @@ unsigned int sleep(unsigned int seconds) {
     return 0;
 }
 
+void* malloc(unsigned int size) {
+    void* ptr = (void*) _heap_base;
+    struct heap_block_header *header, *new_header;
+
+    // find a large enough empty block
+    while (1) {
+        if ((uint32_t)ptr >= _heap_tail) return NULL;
+        header = (struct heap_block_header*) ptr;
+        if (header->allocated == 0 && header->len >= size) break;
+        ptr += sizeof(struct heap_block_header) + header->len;
+    }
+
+    // Split the block if viable
+    if (header->len >= size + 3) {
+        new_header = (struct heap_block_header*)(ptr + sizeof(struct heap_block_header) + size);
+        new_header->allocated = 0;
+        new_header->len = header->len - size - sizeof(struct heap_block_header);
+        header->len = size;
+    }
+
+    // Mark as allocated
+    header->allocated = 1;
+    return ptr + sizeof(struct heap_block_header);
+}
+
+void free(void* ptr) {
+    struct heap_block_header *prev = NULL;
+    struct heap_block_header *header = NULL;
+    struct heap_block_header *next = NULL;
+    void* tmp;
+
+    if ((uint32_t) ptr < _heap_base || (uint32_t)ptr >= _heap_tail) return;
+
+    // Finds the block ptr points to, and the one before it.
+    tmp = (void*) _heap_base;
+    ptr -= sizeof(struct heap_block_header);
+    while (1) {
+        if ((uint32_t)tmp >= _heap_tail) return;
+
+        if (tmp == ptr) {
+            header = (struct heap_block_header*)tmp;
+            break;
+        } else {
+            prev = (struct heap_block_header*)tmp;
+            tmp += sizeof(struct heap_block_header) + prev->len;
+        }
+    }
+
+    // Find next block if exists
+    if (((uint32_t)tmp) + sizeof(struct heap_block_header) + header->len + sizeof(struct heap_block_header) < _heap_tail) {
+        next = (struct heap_block_header*)(tmp + sizeof(struct heap_block_header) + header->len);
+    }
+
+    // Mark as unallocated and try to merge
+    header->allocated = 0;
+    if (next != NULL && next->allocated == 0) {
+        header->len += sizeof(struct heap_block_header) + next->len;
+    }
+    if (prev != NULL && prev->allocated == 0) {
+        prev->len += sizeof(struct heap_block_header) + header->len;
+    }
+}
 /*************************
  *        Prelude        *
  *************************/
 
+static void _init_heap(void) {
+    // Heap memory are allocated in blocks:
+    // [2 bytes header][N bytes]
+    // Low 15 bits of the header is N.
+    // If the block is allocated, the MSB of the header is 1.
+
+#define HEAP_SIZE 4096
+
+    _heap_base = (uint32_t) &_lds_bss_end;
+    _heap_tail = _heap_base + sizeof(struct heap_block_header) + HEAP_SIZE;
+
+    struct heap_block_header* header = (struct heap_block_header*) _heap_base;
+    header->allocated = 0;
+    header->len = HEAP_SIZE;
+}
+
 // Prepare runtime for the main function.
 void _prelude(void) {
+    _init_heap();
+
     // Call main(). TODO print return value.
     int main(void);
     // And call it.
