@@ -116,6 +116,58 @@ void free(void* ptr) {
         prev->len += sizeof(struct heap_block_header) + header->len;
     }
 }
+
+void* memcpy(void* dst, const void* src, unsigned int n) {
+    void* orig_dst = dst;
+    unsigned int copied = 0;
+
+    while (copied != n) {
+        *(char*)dst = *(char*)src;
+        dst++;
+        src++;
+        copied++;
+    }
+
+    return orig_dst;
+}
+
+char* itoa(int n, char* buf) {
+    char tmp[10];
+
+    if (n == 0) {
+        buf[0] = '0';
+        buf[1] = '\0';
+        return buf;
+    }
+
+    if (n == -2147483648) {
+        memcpy(buf, "-2147483648", 12);
+        return buf;
+    }
+
+    int is_negative = n < 0;
+    if (is_negative) n = -n;
+
+    int len = 0;
+    while (n > 0) {
+        tmp[len++] = '0' + (n % 10);
+        n = n / 10;
+    }
+
+    int to_idx = 0;
+    if (is_negative) {
+        buf[0] = '-';
+        to_idx = 1;
+    }
+
+    while (len --> 0) {
+        buf[to_idx++] = tmp[len];
+    }
+    buf[to_idx] = '\0';
+
+    return buf;
+}
+
 /*************************
  *        Prelude        *
  *************************/
