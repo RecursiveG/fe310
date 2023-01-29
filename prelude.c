@@ -1,5 +1,5 @@
-#include <stddef.h>
 #include <stdint.h>
+#include <stdarg.h>
 
 #include "registers.h"
 #include "linker_symbols.h"
@@ -44,10 +44,20 @@ int putchar(int c) {
     return putbyte(c);
 }
 
+// Returns string length
+static int putstr(const char* str) {
+    int len = 0;
+    while (*str) {
+        putchar(*str++);
+        len++;
+    }
+    return len;
+}
+
 int puts(const char *str) {
-    while (*str) putchar(*str++);
+    int len = putstr(str);
     putchar('\n');
-    return 1;
+    return len;
 }
 
 unsigned int sleep(unsigned int seconds) {
@@ -171,6 +181,45 @@ char* itoa(int n, char* buf) {
     buf[to_idx] = '\0';
 
     return buf;
+}
+
+size_t strlen(const char *s) {
+    const char* sbegin = s;
+    while(*s != '\0') s++;
+    return s-sbegin;
+}
+
+int printf(const char* format, ...) {
+    va_list args;
+    va_start(args, format);
+    int ret = 0;
+    for (const char* ptr = format;; ptr++) {
+        char ch = *ptr;
+        char next = *(ptr+1);
+        if (ch == '\0') {
+            break;
+        } else if (ch == '%') {
+            if (next == 's') {
+                ret += putstr(va_arg(args, const char*));
+                ptr++;
+            } else if (next == 'd') {
+                char* nbr = (char*) malloc(256);
+                itoa(va_arg(args, int), nbr);
+                ret += putstr(nbr);
+                free(nbr);
+                ptr++;
+            } else {
+                va_arg(args, int);
+                putchar(ch);
+                ret++;
+            }
+        } else {
+            putchar(ch);
+            ret++;
+        }
+    }
+    va_end(args);
+    return ret;
 }
 
 /*************************
