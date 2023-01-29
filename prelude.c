@@ -22,7 +22,8 @@ _Static_assert(sizeof(struct heap_block_header) == 2, "heap block header size er
  * Common library functions *
  ****************************/
 
-int putchar(int c) {
+// Emit byte to console without converting newline.
+static int putbyte(int c) {
     uint32_t full;
     c &= 0xff;
     do {
@@ -38,9 +39,13 @@ int putchar(int c) {
     return c;
 }
 
+int putchar(int c) {
+    if (c == '\n') putbyte('\r');
+    return putbyte(c);
+}
+
 int puts(const char *str) {
     while (*str) putchar(*str++);
-    putchar('\r');
     putchar('\n');
     return 1;
 }
