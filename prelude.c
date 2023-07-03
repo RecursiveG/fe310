@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdarg.h>
 
+#include "interrupts.h"
 #include "registers.h"
 #include "linker_symbols.h"
 #include "prelude.h"
@@ -245,6 +246,7 @@ static void _init_heap(void) {
 // Prepare runtime for the main function.
 void _prelude(void) {
     _init_heap();
+    _init_interrupts();
 
     // Call main(). TODO print return value.
     int main(void);
