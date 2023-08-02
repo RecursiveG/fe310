@@ -1,6 +1,12 @@
 #include "registers.h"
 #include "prelude.h"
 
+void stackoverflow(int level) {
+    check_heap_smash();
+    printf("overflow level=%d\n", level);
+    stackoverflow(level + 1);
+}
+
 int main(void) {
     printf("Hello RISC-V!\n");
 
@@ -9,6 +15,8 @@ int main(void) {
     REG(GPIO_OUTPUT_EN) |= 0x20;
     while (1) {
         printf("[%s] counter=%d\n", "INFO", counter++);
+
+        if (counter == 5) stackoverflow(0);
 
         if (led_on) {
             puts("led_off");

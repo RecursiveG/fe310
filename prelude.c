@@ -10,6 +10,9 @@
  *         Globals         *
  ***************************/
 
+#define HEAP_SIZE   4096
+#define CANARY_BYTE 0x5a
+
 static uint32_t _heap_base;
 static uint32_t _heap_tail;
 
@@ -147,6 +150,14 @@ void* memcpy(void* dst, const void* src, unsigned int n) {
     return orig_dst;
 }
 
+void* memset(void* dst, int data, size_t count) {
+    char* ptr = dst;
+    while (count-- > 0) {
+        *(ptr++) = (char) data;
+    }
+    return dst;
+}
+
 char* itoa(int n, char* buf) {
     char tmp[10];
 
@@ -223,6 +234,23 @@ int printf(const char* format, ...) {
     return ret;
 }
 
+void halt(const char* msg) {
+    // Disable interrupts
+    __asm__ volatile("csrci mstatus, 8");
+    putstr("halt: ");
+    puts(msg);
+    while (1) {}
+}
+
+void check_heap_smash() {
+    const char* ptr = (const char*)_heap_tail;
+    for (int i = 0; i < 16; ++i) {
+        if (*(ptr++) != CANARY_BYTE) {
+            halt("heap smashed!");
+        }
+    }
+}
+
 /*************************
  *        Prelude        *
  *************************/
@@ -233,14 +261,15 @@ static void _init_heap(void) {
     // Low 15 bits of the header is N.
     // If the block is allocated, the MSB of the header is 1.
 
-#define HEAP_SIZE 4096
-
     _heap_base = (uint32_t) &_lds_bss_end;
     _heap_tail = _heap_base + sizeof(struct heap_block_header) + HEAP_SIZE;
 
     struct heap_block_header* header = (struct heap_block_header*) _heap_base;
     header->allocated = 0;
     header->len = HEAP_SIZE;
+
+    // Put 16 bytes of canary at the end of the heap.
+    memset((void*)_heap_tail, CANARY_BYTE, 16);
 }
 
 // Prepare runtime for the main function.
