@@ -17,8 +17,12 @@ int printf(const char* format, ...);
 void* memset(void* dst, int data, size_t count);
 
 void halt(const char* msg) __attribute__((noreturn));
+// Same as halt, but accepts printf-like arguments.
+void fatal(const char* format, ...) __attribute__((noreturn));
 // Hopefully we haven't smashed the .data segment and still
 // have space for a few more stack frames.
 void check_heap_smash(void);
+
+#define TRACE() do { printf("TRACE: "__FILE__ ": %d\n", __LINE__); } while (0)
 
 #endif  // __PRELUDE_H__

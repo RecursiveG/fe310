@@ -236,9 +236,21 @@ int printf(const char* format, ...) {
 
 void halt(const char* msg) {
     // Disable interrupts
-    __asm__ volatile("csrci mstatus, 8");
+    unset_mstatus_mie();
+
     putstr("halt: ");
     puts(msg);
+    while (1) {}
+}
+
+void fatal(const char* format, ...) {
+    // Disable interrupts
+    unset_mstatus_mie();
+
+    va_list args;
+	va_start(args, format);
+    putstr("halt: ");
+    printf(format, args);
     while (1) {}
 }
 
