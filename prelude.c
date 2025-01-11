@@ -17,7 +17,7 @@ static uint32_t _heap_base;
 static uint32_t _heap_tail;
 
 struct heap_block_header {
-    int allocated : 1;
+    unsigned int allocated : 1;
     uint16_t len : 15;
 } __attribute__((packed));
 _Static_assert(sizeof(struct heap_block_header) == 2, "heap block header size err");
@@ -220,6 +220,16 @@ int printf(const char* format, ...) {
                 ret += putstr(nbr);
                 free(nbr);
                 ptr++;
+            } else if (next == 'f') {
+                char* buf = (char*) malloc(256);
+                int len = double2str(va_arg(args, double), buf, 256);
+                if (len <= 0) {
+                    ret += putstr("[float err]");
+                } else {
+                    ret += putstr(buf);
+                }
+                free(buf);
+                ptr++;
             } else {
                 va_arg(args, int);
                 putchar(ch);
@@ -232,6 +242,55 @@ int printf(const char* format, ...) {
     }
     va_end(args);
     return ret;
+}
+
+int double2str(double f, char* buf, size_t len) {
+    if (len < 2) return 0;
+
+    int p = 0;
+    if (f < 0) {
+        buf[p++] = '-';
+        f = -f;
+        if (p >= len) return 0;
+    }
+
+    int upper_digits = 0;
+    double tmp = f;
+    while (tmp >= 1) {
+        upper_digits++;
+        tmp /= 10.0;
+    }
+
+    if (upper_digits == 0) {
+        buf[p++] = '0';
+        if (p >= len) return 0;
+    }
+    
+    for (int i=0; i< upper_digits; ++i) {
+        tmp *= 10.0;
+        int d = 0;
+        while (tmp >= 1) {
+            d += 1;
+            tmp -= 1;
+        }
+        buf[p++] = '0' + d;
+        if (p >= len) return 0;
+    }
+
+    buf[p++] = '.';
+    if (p >= len) return 0;
+    do {
+        tmp *= 10;
+        int d = 0;
+        while (tmp >= 1 - 1e-10) {
+            d += 1;
+            tmp -= 1;
+        }
+        buf[p++] = '0' + d;
+        if (p >= len) return 0;
+    } while(tmp > 1e-10);
+    buf[p] = '\0';
+    return p;
 }
 
 void halt(const char* msg) {

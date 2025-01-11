@@ -3,8 +3,8 @@ CFLAGS=--target=riscv32 -mcpu=sifive-e31 -nostdlib -mno-relax -std=c2x
 LD=ld.lld
 LDFLAGS=
 
-program.elf program.map: start.o prelude.o main.o interrupts.o fe310.lds linker_symbols.h Makefile
-	$(LD) $(LDFLAGS) -T fe310.lds start.o prelude.o main.o interrupts.o -o program.elf -Map=program.map
+program.elf program.map: start.o prelude.o main.o interrupts.o libclang_rt.builtins-riscv32.a fe310.lds linker_symbols.h Makefile
+	$(LD) $(LDFLAGS) -T fe310.lds start.o prelude.o main.o interrupts.o -L. -lclang_rt.builtins-riscv32 -o program.elf -Map=program.map
 
 start.o : start.c linker_symbols.h registers.h Makefile
 	$(CC) $(CFLAGS) -c start.c -o start.o

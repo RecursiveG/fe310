@@ -4,3 +4,6 @@ old*
 *.o
 *.bak
 settings.json
+
+llvm-*
+*.a

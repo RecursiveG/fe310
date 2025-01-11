@@ -16,6 +16,8 @@ size_t strlen(const char *s);
 int printf(const char* format, ...);
 void* memset(void* dst, int data, size_t count);
 
+// return length of string, or 0 if buffer not long enough.
+int double2str(double f, char* buf, size_t len);
 void halt(const char* msg) __attribute__((noreturn));
 // Same as halt, but accepts printf-like arguments.
 void fatal(const char* format, ...) __attribute__((noreturn));

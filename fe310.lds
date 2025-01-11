@@ -17,6 +17,7 @@ SECTIONS {
 	.text.onflash : {
 		*(.text.init_stack)
 		*(.text.start)
+		*libclang_rt*(.text)  /* Compiler RT doesn't fit in ITIM, so run from FLASH */
 	} >flash AT>flash
 
 	.text : {

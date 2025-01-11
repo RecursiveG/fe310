@@ -35,10 +35,23 @@ int main(void) {
     REG(UART0_IE) = 2;
     plic_handler_register(PLIC_SOURCE_UART0, &rx_interrupt);
 
-    puts("UART RX ready. Continue in 10 seconds...");
+    puts("UART RX ready. Try typing something. Continue in 10 seconds...");
     sleep(10);
     plic_handler_unregister(PLIC_SOURCE_UART0, &rx_interrupt);
     puts("UART RX disabled.");
+
+    puts("Finding sqrt(2) using Newton's method.");
+    double n = 2;
+    double x = n/2;
+    int iter = 0;
+    while (1) {
+        double next = (x + n / x) / 2;
+        double err = next - x;
+        printf("Iteration #%d value=%f error=%f\n", ++iter, next, err);
+        if (err < 0) err = -err;
+        if (err < 1e-6) break;
+        x = next;
+    }
 
     int led_on = 0;
     int counter = -10;
