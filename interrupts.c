@@ -95,7 +95,7 @@ static void handle_plic_interrupt(void) {
         plic_handler_f *handler = plic_handlers[source_id-1];
         if (handler == NULL)
             fatal("missing handler for PLIC source %d", source_id);
-        handler();
+        handler(source_id);
 
         // Completion
         REG(PLIC_M_CLAIM_COMPLETION) = source_id;
@@ -144,6 +144,10 @@ int plic_handler_unregister(int source_id, plic_handler_f *handler) {
     }
     if (plic_handlers[source_id - 1] == NULL) {
         printf("%s: double unregistration %d\n", __FUNCTION__, source_id);
+        return -1;
+    }
+    if(plic_handlers[source_id - 1] != handler) {
+        printf("%s: handler mismatch %d\n", __FUNCTION__, source_id);
         return -1;
     }
     AREG(PLIC_M_ENABLE)[source_id >> 5] &= ~BIT(source_id & 0x1f);

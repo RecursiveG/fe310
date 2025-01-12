@@ -428,7 +428,8 @@ static char stdin_data[MAX_DATA_LENGTH];
 static _Atomic(int) stdin_data_head;
 static _Atomic(int) stdin_data_tail;
 
-static void on_uart_rx() {
+static void on_uart_rx(int source_id) {
+    if (source_id != PLIC_SOURCE_UART0) halt("invalid source for uart rx");
     int data = REG(UART0_RXDATA);
     if (data < 0) halt("rx interrupt has no data");
 

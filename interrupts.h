@@ -16,7 +16,7 @@ inline void unset_mstatus_mie(void) {
     __asm__ inline volatile("csrci mstatus, 8");
 }
 
-typedef void (plic_handler_f)(void);
+typedef void (plic_handler_f)(int source_id);
 // Returns 0 if success, -1 on error
 int plic_handler_register(int source_id, plic_handler_f *handler);
 int plic_handler_unregister(int source_id, plic_handler_f *handler);
