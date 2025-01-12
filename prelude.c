@@ -263,6 +263,14 @@ char* split_index(const char* s, int idx) {
     return ret;
 }
 
+static int print_hex(int val) {
+    const char* digits = "0123456789abcdef";
+    for (int i = 7; i >= 0; --i) {
+        putchar(digits[(val >> (i*4)) & 0xf]);
+    }
+    return 8;
+}
+
 int printf(const char* format, ...) {
     va_list args;
     va_start(args, format);
@@ -281,6 +289,9 @@ int printf(const char* format, ...) {
                 itoa(va_arg(args, int), nbr);
                 ret += putstr(nbr);
                 free(nbr);
+                ptr++;
+            } else if (next == 'x') {
+                ret += print_hex(va_arg(args, int));
                 ptr++;
             } else if (next == 'f') {
                 char* buf = (char*) malloc(256);
