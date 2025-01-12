@@ -33,6 +33,9 @@ void fatal(const char* format, ...) __attribute__((noreturn));
 // have space for a few more stack frames.
 void check_heap_smash(void);
 
+// Insert a line as if it's received from UART.
+// WARN: may race with UART RX interrupt.
+void simulate_input(const char* str);
 char* gets(char* str);
 
 #define TRACE() do { printf("TRACE: "__FILE__ ": %d\n", __LINE__); } while (0)

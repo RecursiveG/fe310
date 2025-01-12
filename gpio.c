@@ -73,6 +73,8 @@ void gpio_setup(int gpio, const struct gpio_config* config) {
     }
 
     // Disable all interrupts.
+    // Note the pending bits will still be set
+    // TODO: move to above the GPIO_INPUT_EN reg writes.
     UNSET(REG(GPIO_RISE_IE), BIT(gpio));
     UNSET(REG(GPIO_FALL_IE), BIT(gpio));
     UNSET(REG(GPIO_HIGH_IE), BIT(gpio));

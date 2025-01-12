@@ -481,6 +481,26 @@ static void on_uart_rx(int source_id) {
     stdin_line_len = 0;
 }
 
+void simulate_input(const char* str) {
+    int line_len = strlen(str);
+    
+    int len = stdin_data_tail - stdin_data_head;
+    if (len < 0) len += MAX_DATA_LENGTH;
+    int rem = MAX_DATA_LENGTH - len - 1;
+    if (rem < line_len + 1) {
+        printf("Not enough space to insert line: %s\n", str);
+        return;
+    }
+
+    puts(str);
+    for (int i = 0; i < line_len; i++) {
+        stdin_data[(stdin_data_tail + i) % MAX_DATA_LENGTH] = str[i];
+    }
+    stdin_data[(stdin_data_tail + line_len) % MAX_DATA_LENGTH] = '\0';
+    __asm__ volatile("fence w, w\n");  // Put a fence ensure tail is updated after the data.
+    stdin_data_tail = (stdin_data_tail + line_len + 1) % MAX_DATA_LENGTH;
+}
+
 static void _init_stdin(void) {
     stdin_line_len = 0;
     stdin_data_head = 0;

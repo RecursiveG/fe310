@@ -64,6 +64,7 @@ void pwm(int percentile) {
 
 void btn(int gpio, enum gpio_intr_type type) {
     printf("Interrupt gpio %d type %d\n", gpio, type);
+    simulate_input("led");
 }
 
 int main(void) {
