@@ -1,6 +1,7 @@
 #include "interrupts.h"
 #include "registers.h"
 #include "prelude.h"
+#include "gpio.h"
 
 void stackoverflow(int level) {
     check_heap_smash();
@@ -61,9 +62,23 @@ void pwm(int percentile) {
     REG(PWM1_CMP1) = 2560 * (100-percentile) / 100;
 }
 
+void btn(int gpio, enum gpio_intr_type type) {
+    printf("Interrupt gpio %d type %d\n", gpio, type);
+}
+
 int main(void) {
     printf("Hello RISC-V!\n");
     pwm(30);
+    
+    struct gpio_config gpiocfg = {
+        .iof_sel = GPIO_IOF_NONE,
+        .input_en = 1,
+        .internal_pullup = 1,
+        .interrupt_mode = GPIO_INTR_FALL,
+        .intr_handler = &btn,
+    };
+    gpio_setup(23, &gpiocfg);
+
     while(1) {
         char cmd[256];
         printf("cmd>");

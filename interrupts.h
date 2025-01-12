@@ -3,6 +3,7 @@
 
 #define PLIC_SOURCE_UART0 3
 #define PLIC_SOURCE_UART1 4
+#define PLIC_SOURCE_GPIO(x) (8+x)
 
 void _init_interrupts(void);
 
