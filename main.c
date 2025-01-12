@@ -30,6 +30,7 @@ void toggle_led() {
 }
 
 static int pwm_on = 0;
+static int current_percentile = 0;
 void pwm(int percentile) {
     // Target freq = 25KHz, bus freq from PLL is 64MHz
     // Output use PWM instance 1, comparator 1, GPIO 19 IOF 1, board pin "~3"
@@ -60,24 +61,32 @@ void pwm(int percentile) {
     printf("Setting PWM to %d%%\n", percentile);
     // First 100-percent are low, then followed by percentile% high
     REG(PWM1_CMP1) = 2560 * (100-percentile) / 100;
+    current_percentile = percentile;
 }
 
-void btn(int gpio, enum gpio_intr_type type) {
-    printf("Interrupt gpio %d type %d\n", gpio, type);
-    simulate_input("led");
+// PIN 7:Toggle LED
+// PIN~6:Toggle PWM duty cycle
+void on_button_press(int gpio, enum gpio_intr_type type) {
+    if (gpio == 23 && type == GPIO_INTR_FALL) {
+        simulate_input("led");
+    } else if (gpio == 22 && type == GPIO_INTR_FALL) {
+        simulate_input("pwm next");
+    } else {
+        printf("Unknown interrupt for GPIO %d type %d\n", gpio, type);
+    }
 }
 
 int main(void) {
     printf("Hello RISC-V!\n");
-    pwm(30);
     
     struct gpio_config gpiocfg = {
         .iof_sel = GPIO_IOF_NONE,
         .input_en = 1,
         .internal_pullup = 1,
         .interrupt_mode = GPIO_INTR_FALL,
-        .intr_handler = &btn,
+        .intr_handler = &on_button_press,
     };
+    gpio_setup(22, &gpiocfg);
     gpio_setup(23, &gpiocfg);
 
     while(1) {
@@ -132,11 +141,20 @@ int main(void) {
         } else if (startswith(cmd, "pwm")) {
             char* sval = split_index(cmd, 1);
             if (sval == NULL || sval[0] == '\0') {
-                puts("Missing value. Usage: pwm <0~100>");
+                puts("Missing value. Usage: pwm <0~100> or \"pwm next\"");
                 if (sval) free(sval);
                 continue;
             }
             int val = atoi(sval);
+            if (strcmp(sval, "next") == 0) {
+                if (current_percentile < 20) val = 20;
+                else if (current_percentile < 40) val = 40;
+                else if (current_percentile < 60) val = 60;
+                else if (current_percentile < 80) val = 80;
+                else if (current_percentile < 100) val = 100;
+                else val = 20;
+                printf("Next PWM value: %d\n", val);
+            }
             free(sval);
             if (val < 0 || val > 100) {
                 puts("Value out of range. Usage: pwm <0~100>");
