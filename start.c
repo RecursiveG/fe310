@@ -18,15 +18,15 @@ __asm__(
  * All _start* functions are put in the .text.start section.*
  * They will be executed on SPI flash directly.             *
  ************************************************************/
-void _start(void)                                    __attribute__((section(".text.start")));
+void _start(void)                                    __attribute__((section(".text.start"), optnone));
 // This function should only be called after the RTC is initialized.
-static void _start_wait_rtc_ticks(int ticks)         __attribute__((section(".text.start")));
+static void _start_wait_rtc_ticks(int ticks)         __attribute__((section(".text.start"), optnone));
 // These functions should only be called after .data is copied
 // and UART is initialized.
 // Until then string constants become valid.
-static void _start_putc(char c)                      __attribute__((section(".text.start")));
-static void _start_puts(const char* s)               __attribute__((section(".text.start")));
-static void _start_hexdump(const void* buf, int len) __attribute__((section(".text.start")));
+static void _start_putc(char c)                      __attribute__((section(".text.start"), optnone));
+static void _start_puts(const char* s)               __attribute__((section(".text.start"), optnone));
+static void _start_hexdump(const void* buf, int len) __attribute__((section(".text.start"), optnone));
 
 void _start(void) {
     // Enable RTC: 32.768kHz

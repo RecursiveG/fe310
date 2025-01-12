@@ -150,6 +150,16 @@ void* memcpy(void* dst, const void* src, unsigned int n) {
     return orig_dst;
 }
 
+int memcmp(const void* a, const void* b, size_t n) {
+    const signed char *x = a, *y = b;
+    for (int i = 0; i < n; ++i) {
+        if (*x != *y) return *x - *y;
+        ++x;
+        ++y;
+    }
+    return 0;
+}
+
 void* memset(void* dst, int data, size_t count) {
     char* ptr = dst;
     while (count-- > 0) {

@@ -11,6 +11,7 @@ unsigned int sleep(unsigned int seconds);
 void* malloc(unsigned int size);
 void free(void* ptr);
 void* memcpy(void* dst, const void* src, unsigned int n);
+int memcmp(const void* a, const void* b, size_t n);
 char* itoa(int n, char* buf);
 int atoi(const char* s);
 size_t strlen(const char *s);

@@ -1,6 +1,6 @@
 CC=clang
-# Use LTO to reduce size
-CFLAGS=--target=riscv32 -mcpu=sifive-e31 -nostdlib -mno-relax -std=c2x -flto
+# Use LTO and -Os to reduce size
+CFLAGS=--target=riscv32 -mcpu=sifive-e31 -nostdlib -mno-relax -std=c2x -flto -Os
 LD=ld.lld
 LDFLAGS=
 COMMON_DEPS=Makefile linker_symbols.h registers.h prelude.h interrupts.h gpio.h
