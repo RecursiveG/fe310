@@ -201,6 +201,19 @@ size_t strlen(const char *s) {
     return s-sbegin;
 }
 
+int strcmp(const char* s1, const char* s2) {
+    int idx = 0;
+    while (1) {
+        char c1 = s1[idx];
+        char c2 = s2[idx];
+        if (c1 == '\0' && c2 == '\0') break;
+        if (c1 < c2) return -1;
+        if (c1 > c2) return 1;
+        idx++;
+    }
+    return 0;
+}
+
 int printf(const char* format, ...) {
     va_list args;
     va_start(args, format);
@@ -323,6 +336,103 @@ void check_heap_smash() {
 }
 
 /*************************
+ *        IO stuff       *
+ *************************/
+
+// new text in stdin_line, and moved to stdin_data when newline is received.
+#define MAX_LINE_LENGTH 256
+static char stdin_line[MAX_LINE_LENGTH];
+static int  stdin_line_len;
+
+// multiple lines delimited by '\0', the len includes this null byte.
+// [head ...\0 ...\0 ..\0] tail
+#define MAX_DATA_LENGTH 512
+static char stdin_data[MAX_DATA_LENGTH];
+// Note an interrupt can come in the middle of IO functions and append to this.
+// Thus we need to make the counters atomic and make sure all IO functions can
+// properly handle that.
+static _Atomic(int) stdin_data_head;
+static _Atomic(int) stdin_data_tail;
+
+static void on_uart_rx() {
+    int data = REG(UART0_RXDATA);
+    if (data < 0) halt("rx interrupt has no data");
+
+    if (data < 32 && data != '\r') {
+        putchar('\a');
+        return;
+    }
+
+    // Backspace, doesn't work in middle of a line.
+    if (data == 127) {
+        if (stdin_line_len > 0) {
+            printf("\b \b");
+            stdin_line_len--;
+        }
+        return;
+    }
+
+    // User pressing ENTER generates a CR.
+    if (data == '\r') data = '\n';
+
+    // Append to line if not newline.
+    if (data != '\n') {
+        if (stdin_line_len >= MAX_LINE_LENGTH) {
+            putchar('\a');
+        } else {
+            stdin_line[stdin_line_len++] = data;
+            putchar(data);
+        }
+        return;
+    }
+
+    // Newline
+    int len = stdin_data_tail - stdin_data_head;
+    if (len < 0) len += MAX_DATA_LENGTH;
+    int rem = MAX_DATA_LENGTH - len - 1;
+    if (rem < stdin_line_len + 1) {
+        // Not enough space in data buf
+        putchar('\a');
+        return;
+    }
+
+    putchar('\n');
+    for (int i = 0; i < stdin_line_len; i++) {
+        stdin_data[(stdin_data_tail + i) % MAX_DATA_LENGTH] = stdin_line[i];
+    }
+    stdin_data[(stdin_data_tail + stdin_line_len) % MAX_DATA_LENGTH] = '\0';
+    __asm__ volatile("fence w, w\n");  // Put a fence ensure tail is updated after the data.
+    stdin_data_tail = (stdin_data_tail + stdin_line_len + 1) % MAX_DATA_LENGTH;
+    stdin_line_len = 0;
+}
+
+static void _init_stdin(void) {
+    stdin_line_len = 0;
+    stdin_data_head = 0;
+    stdin_data_tail = 0;
+
+    REG(GPIO_IOF_EN) |= 1<<16;
+    REG(UART0_RXCTRL) = 1;
+    REG(UART0_IE) = 2;
+    plic_handler_register(PLIC_SOURCE_UART0, &on_uart_rx);
+}
+
+char* gets(char* str) {
+    while (stdin_data_head == stdin_data_tail) {
+        // spin until we see data.
+    }
+    int len = 0;
+    int idx = stdin_data_head;
+    while (stdin_data[idx] != '\0') {
+        str[len++] = stdin_data[idx];
+        idx = (idx + 1) % MAX_DATA_LENGTH;
+    }
+    str[len] = '\0';
+    stdin_data_head = (idx + 1) % MAX_DATA_LENGTH;
+    return str;
+}
+
+/*************************
  *        Prelude        *
  *************************/
 
@@ -347,6 +457,7 @@ static void _init_heap(void) {
 void _prelude(void) {
     _init_heap();
     _init_interrupts();
+    _init_stdin();
 
     // Call main(). TODO print return value.
     int main(void);

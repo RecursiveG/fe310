@@ -13,6 +13,7 @@ void free(void* ptr);
 void* memcpy(void* dst, const void* src, unsigned int n);
 char* itoa(int n, char* buf);
 size_t strlen(const char *s);
+int strcmp(const char* s1, const char* s2);
 int printf(const char* format, ...);
 void* memset(void* dst, int data, size_t count);
 
@@ -25,6 +26,14 @@ void fatal(const char* format, ...) __attribute__((noreturn));
 // have space for a few more stack frames.
 void check_heap_smash(void);
 
+char* gets(char* str);
+
 #define TRACE() do { printf("TRACE: "__FILE__ ": %d\n", __LINE__); } while (0)
+
+#define COLOR_RESET "\e[0m"
+#define COLOR_RED   "\e[31m"
+#define COLOR_GREEN "\e[32m"
+#define COLOR_BLUE  "\e[34m"
+#define COLOR_WHITE "\e[37m"
 
 #endif  // __PRELUDE_H__

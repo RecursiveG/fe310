@@ -8,68 +8,79 @@ void stackoverflow(int level) {
     stackoverflow(level + 1);
 }
 
-static void rx_interrupt(void) {
-    int data = REG(UART0_RXDATA);
-    if (data < 0) halt("rx interrupt has no data");
-
-    // Backspace, doesn't work in middle of a line.
-    if (data == 127) {
-        printf("\b \b");
-        return;
+static int led_on = -1;
+void toggle_led() {
+    if (led_on < 0) {
+        puts("Initializing LED...");
+        REG(GPIO_OUTPUT_VAL) &= 0xFFFFFFDFU;
+        REG(GPIO_OUTPUT_EN) |= 0x20;
+        led_on = 0;
     }
 
-    // User pressing ENTER generates a CR.
-    if (data == '\r') data = '\n';
-
-    // Echo it back.
-    putchar(data);
+    if (led_on == 0) {
+        REG(GPIO_OUTPUT_VAL) |= 0x20U;
+        puts("LED turned " COLOR_BLUE "on" COLOR_RESET);
+        led_on = 1;
+    } else {
+        REG(GPIO_OUTPUT_VAL) &= 0xFFFFFFDFU;
+        puts("LED turned " COLOR_WHITE "off" COLOR_RESET);
+        led_on = 0;
+    }
 }
 
 int main(void) {
     printf("Hello RISC-V!\n");
-    REG(CLINT_MSIP) = 1;
+    while(1) {
+        char cmd[256];
+        printf("cmd>");
+        gets(cmd);
+        if (cmd[0] == '\0') continue;
 
-    // Init UART RX
-    REG(GPIO_IOF_EN)  |= 1<<16;
-    REG(UART0_RXCTRL) = 1;
-    REG(UART0_IE) = 2;
-    plic_handler_register(PLIC_SOURCE_UART0, &rx_interrupt);
+        if (0 == strcmp(cmd, "sqrt")) {
+            puts("Finding sqrt(2) using Newton's method...");
+            double n = 2;
+            double x = n/2;
+            int iter = 0;
+            while (1) {
+                double next = (x + n / x) / 2;
+                double err = next - x;
+                printf("Iteration #%d value=%f error=%f\n", ++iter, next, err);
+                if (err < 0) err = -err;
+                if (err < 1e-6) break;
+                x = next;
+            }
 
-    puts("UART RX ready. Try typing something. Continue in 10 seconds...");
-    sleep(10);
-    plic_handler_unregister(PLIC_SOURCE_UART0, &rx_interrupt);
-    puts("UART RX disabled.");
+        } else if (0 == strcmp(cmd, "sw_int")) {
+            puts("Now triggering a software interrupt to the core.");
+            REG(CLINT_MSIP) = 1;
 
-    puts("Finding sqrt(2) using Newton's method.");
-    double n = 2;
-    double x = n/2;
-    int iter = 0;
-    while (1) {
-        double next = (x + n / x) / 2;
-        double err = next - x;
-        printf("Iteration #%d value=%f error=%f\n", ++iter, next, err);
-        if (err < 0) err = -err;
-        if (err < 1e-6) break;
-        x = next;
-    }
+        } else if (0 == strcmp(cmd, "stackoverflow")) {
+            stackoverflow(0);
 
-    int led_on = 0;
-    int counter = -10;
-    REG(GPIO_OUTPUT_EN) |= 0x20;
-    while (1) {
-        printf("[%s] counter=%d\n", "INFO", counter++);
+        } else if (0 == strcmp(cmd, "halt")) {
+            halt("user requested halt");
 
-        if (counter == 5) stackoverflow(0);
+        } else if (0 == strcmp(cmd, "greet")) {
+            printf("Your name? ");
+            char str[256];
+            gets(str);
+            if (strlen(str) == 0) {
+                memcpy(str, "world", 6);
+            }
+            printf("Hello %s!\n", str);
 
-        if (led_on) {
-            puts("led_off");
-            REG(GPIO_OUTPUT_VAL) &= 0xFFFFFFDFU;
-            led_on = 0;
+        } else if (0 == strcmp(cmd, "sleep")) {
+            puts("Sleeping 3 seconds...");
+            sleep(3);
+
+        } else if (0 == strcmp(cmd, "led")) {
+            toggle_led();
+        
+        } else if (0 == strcmp(cmd, "color")) {
+            puts(COLOR_RED "red " COLOR_GREEN "green " COLOR_BLUE "blue " COLOR_WHITE "white" COLOR_RESET);
+
         } else {
-            puts("led_on");
-            REG(GPIO_OUTPUT_VAL) |= 0x20U;
-            led_on = 1;
+            printf("Unknown command: %s\nMaybe check the source code...\n", cmd);
         }
-        sleep(1);
     }
 }
