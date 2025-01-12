@@ -195,6 +195,27 @@ char* itoa(int n, char* buf) {
     return buf;
 }
 
+int atoi(const char* s) {
+    int sign = 1;
+    int val = 0;
+    int seen_text = 0;
+    for (int i = 0; s[i] != '\0'; ++i) {
+        char ch = s[i];
+        if (!seen_text && ch == ' ') continue;
+        if (!seen_text && ch == '-') {
+            sign = -1;
+            seen_text = 1;
+            continue;
+        }
+        seen_text = 1;
+        if (ch < '0' || '9' < ch) {
+            break;
+        }
+        val = val * 10 + (ch - '0');
+    }
+    return val * sign;
+}
+
 size_t strlen(const char *s) {
     const char* sbegin = s;
     while(*s != '\0') s++;
@@ -212,6 +233,34 @@ int strcmp(const char* s1, const char* s2) {
         idx++;
     }
     return 0;
+}
+
+int startswith(const char* s, const char* prefix) {
+    int i = 0;
+    while (s[i] == prefix[i] && s[i] != '\0') {
+        ++i;
+    }
+    return prefix[i] == '\0';
+}
+
+char* split_index(const char* s, int idx) {
+    if (s[0] == '\0') return NULL;
+    int i = 0;
+    while (idx > 0 && s[i] != '\0') {
+        if (s[i++] == ' ') --idx;
+    }
+    if (idx > 0) return NULL;
+
+    int j = i;
+    while (s[j] != ' ' && s[j] != '\0') {
+        ++j;
+    }
+
+    int len = j-i;
+    char* ret = (char*) malloc(len+1);
+    memcpy(ret, s+i, len);
+    ret[len] = '\0';
+    return ret;
 }
 
 int printf(const char* format, ...) {
@@ -243,6 +292,10 @@ int printf(const char* format, ...) {
                 }
                 free(buf);
                 ptr++;
+            } else if (next == '%') {
+                putchar('%');
+                ++ret;
+                ++ptr;
             } else {
                 va_arg(args, int);
                 putchar(ch);

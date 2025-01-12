@@ -12,8 +12,14 @@ void* malloc(unsigned int size);
 void free(void* ptr);
 void* memcpy(void* dst, const void* src, unsigned int n);
 char* itoa(int n, char* buf);
+int atoi(const char* s);
 size_t strlen(const char *s);
 int strcmp(const char* s1, const char* s2);
+int startswith(const char* s, const char* prefix);
+// split the string by space and return the idx-th part of it.
+// idx is zero based. Caller must free() the returned ptr.
+// Returns NULL if index is out of bound.
+char* split_index(const char* s, int idx);
 int printf(const char* format, ...);
 void* memset(void* dst, int data, size_t count);
 

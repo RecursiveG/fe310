@@ -28,8 +28,42 @@ void toggle_led() {
     }
 }
 
+static int pwm_on = 0;
+void pwm(int percentile) {
+    // Target freq = 25KHz, bus freq from PLL is 64MHz
+    // Output use PWM instance 1, comparator 1, GPIO 19 IOF 1, board pin "~3"
+    if (percentile < 0 || percentile > 100) halt("out of range");
+    
+
+    if (!pwm_on) {
+        puts("Initializing PWM1 CMP1 on GPIO19 IOF1 board PIN~3");
+        REG(GPIO_IOF_EN) |= 1<<19;
+        REG(GPIO_IOF_SEL) |= 1<<19;
+
+        // x (1/64M) == 1/25K
+        //         x == 64M / 25K
+        //         x == 2560;
+        REG(PWM1_CMP0) = 2560;
+        REG(PWM1_CMP1) = 2560 * (100-percentile) / 100;
+
+        uint32_t cfg = 0;
+        // pwm scale is 0 so counter counts at 64MHz
+        cfg |= 1 << 9; // set pwmzerocmp, this make the counter reset when reach cmp0.
+        cfg |= 1 << 10; // set pwmdeglitch
+        cfg |= 1 << 12; // set pwmenalways
+        REG(PWM1_CFG) = cfg;
+
+        pwm_on = 1;
+    }
+
+    printf("Setting PWM to %d%%\n", percentile);
+    // First 100-percent are low, then followed by percentile% high
+    REG(PWM1_CMP1) = 2560 * (100-percentile) / 100;
+}
+
 int main(void) {
     printf("Hello RISC-V!\n");
+    pwm(30);
     while(1) {
         char cmd[256];
         printf("cmd>");
@@ -78,6 +112,21 @@ int main(void) {
         
         } else if (0 == strcmp(cmd, "color")) {
             puts(COLOR_RED "red " COLOR_GREEN "green " COLOR_BLUE "blue " COLOR_WHITE "white" COLOR_RESET);
+
+        } else if (startswith(cmd, "pwm")) {
+            char* sval = split_index(cmd, 1);
+            if (sval == NULL || sval[0] == '\0') {
+                puts("Missing value. Usage: pwm <0~100>");
+                if (sval) free(sval);
+                continue;
+            }
+            int val = atoi(sval);
+            free(sval);
+            if (val < 0 || val > 100) {
+                puts("Value out of range. Usage: pwm <0~100>");
+            } else {
+                pwm(val);
+            }
 
         } else {
             printf("Unknown command: %s\nMaybe check the source code...\n", cmd);

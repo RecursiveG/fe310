@@ -1,5 +1,6 @@
 CC=clang
-CFLAGS=--target=riscv32 -mcpu=sifive-e31 -nostdlib -mno-relax -std=c2x
+# Use LTO to reduce size
+CFLAGS=--target=riscv32 -mcpu=sifive-e31 -nostdlib -mno-relax -std=c2x -flto
 LD=ld.lld
 LDFLAGS=
 
