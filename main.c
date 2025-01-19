@@ -76,6 +76,88 @@ void on_button_press(int gpio, enum gpio_intr_type type) {
     }
 }
 
+#define I2C_CMD_IACK    0x01
+#define I2C_CMD_NACK    0x08
+#define I2C_CMD_WRITE   0x10
+#define I2C_CMD_READ    0x20
+#define I2C_CMD_STOP    0x40
+#define I2C_CMD_START   0x80
+
+// return the status register
+int i2c_wait_completion(void) {
+    int status;
+    uint64_t deadline = REG64(CLINT_MTIME) + 10000;
+    while (1) {
+        status = REG(I2C_SR);
+        if ((status & 0x2) == 0) {
+            break;
+        }
+        if (REG64(CLINT_MTIME) > deadline) {
+            halt("I2C transaction not complete in time");
+        }
+    }
+    return status;
+}
+
+int i2c_issue_stop(void) {
+    REG(I2C_CR) = I2C_CMD_STOP;
+    i2c_wait_completion();
+}
+
+static int i2c_initialized = 0;
+// MCP9808 read temperature
+void i2c_read_temperature(void) {
+    if (!i2c_initialized) {
+        printf("Initializing I2C on GPIO 12/13 IOF 0 PIN 18/19...\n");
+        struct gpio_config gpiocfg = {
+            .iof_sel = GPIO_IOF_0,
+            .input_en = 1,
+        };
+        gpio_setup(12, &gpiocfg);
+        gpio_setup(13, &gpiocfg);
+
+        // prescale = bus_freq / (5 * i2c_freq) - 1
+        // bus_freq=64MHz  i2c_freq=400KHz  prescale=31
+        // Note this cannot give the exact frequency.
+        REG(I2C_PRER_HI) = 31 >> 8;
+        REG(I2C_PRER_LO) = 31 & 0xff;
+
+        REG(I2C_CTR) = 0x80;  // Enable bit
+
+        i2c_initialized = 1;
+    }
+
+    int status;
+    REG(I2C_TXR) = 0x30;  // Write to device address 0x18
+    REG(I2C_CR) = I2C_CMD_START | I2C_CMD_WRITE;
+    status = i2c_wait_completion();
+    if (status & 0x80) { printf("NACK :-(\n"); i2c_issue_stop(); return; }
+
+    REG(I2C_TXR) = 0x05;  // Set read pointer to 0x5 (temperature reg)
+    REG(I2C_CR) = I2C_CMD_WRITE | I2C_CMD_STOP;
+    status = i2c_wait_completion();
+    if (status & 0x80) { printf("NACK :-(\n"); return; }
+
+    // Signal timing for restart is broken (hw bug?), have to stop then start.
+
+    REG(I2C_TXR) = 0x31;  // Read from device address 0x18
+    REG(I2C_CR) = I2C_CMD_START | I2C_CMD_WRITE;
+    status = i2c_wait_completion();
+    if (status & 0x80) { printf("NACK :-(\n"); i2c_issue_stop(); return; }
+
+    REG(I2C_CR) = I2C_CMD_READ;  // Read high byte
+    status = i2c_wait_completion();
+    uint32_t hi = REG(I2C_RXR);
+
+    REG(I2C_CR) = I2C_CMD_READ | I2C_CMD_NACK | I2C_CMD_STOP;  // Read low byte
+    status = i2c_wait_completion();
+    uint32_t lo = REG(I2C_RXR);
+
+    // Convert temperature to decimal.
+    double temp = (double)((int16_t)((hi << 11) | (lo << 3)) >> 3) / 16.0;
+    printf("Temperature=%f\n", temp);
+}
+
 int main(void) {
     printf("Hello RISC-V!\n");
     
@@ -137,6 +219,12 @@ int main(void) {
         
         } else if (0 == strcmp(cmd, "color")) {
             puts(COLOR_RED "red " COLOR_GREEN "green " COLOR_BLUE "blue " COLOR_WHITE "white" COLOR_RESET);
+
+        } else if (0 == strcmp(cmd, "i2c")) {
+            for (int i = 0; i < 10; ++i) {
+                i2c_read_temperature();
+                sleep(1);
+            }
 
         } else if (startswith(cmd, "pwm")) {
             char* sval = split_index(cmd, 1);

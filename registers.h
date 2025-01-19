@@ -43,6 +43,19 @@
 #define REG_UART0_RXCTRL    0x1001'300cu
 #define REG_UART0_IE        0x1001'3010u
 #define REG_UART0_DIV       0x1001'3018u
+
+// Note: I2C registers are aligned to 4B but are all 1B long.
+// TX&RX, CR&SR share the same address, behave differently when read/write
+#define REG_I2C_PRER_LO     0x1001'6000u
+#define REG_I2C_PRER_HI     0x1001'6004u
+#define REG_I2C_CTR         0x1001'6008u
+// Register write
+#define REG_I2C_TXR         0x1001'600cu
+#define REG_I2C_CR          0x1001'6010u
+// Register read
+#define REG_I2C_RXR         0x1001'600cu
+#define REG_I2C_SR          0x1001'6010u
+
 #define REG_PWM1_CFG        0x1002'5000u
 #define REG_PWM1_CMP0       0x1002'5020u
 #define REG_PWM1_CMP1       0x1002'5024u
